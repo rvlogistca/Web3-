@@ -1,14 +1,30 @@
-export function initWallet() {
-  return typeof window !== 'undefined' && !!window.ethereum
+
+import { BrowserProvider } from "ethers";
+
+export async function conectarCarteira() {
+  if (!window.ethereum) {
+    throw new Error("MetaMask não encontrada.");
+  }
+
+  const contas = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+
+  if (!contas.length) {
+    throw new Error("Nenhuma conta autorizada.");
+  }
+
+  const provider = new BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+
+  return {
+    endereco: await signer.getAddress(),
+    provider,
+    signer,
+  };
 }
 
-export async function connectWallet() {
-  if (!initWallet()) return null
-  try {
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-    return accounts[0] || null
-  } catch (err) {
-    console.warn('Erro:', err)
-    return null
-  }
+export async function desconectarCarteira() {
+  // A MetaMask não oferece desconexão programática.
+  // Remova a sessão local da aplicação.
 }
