@@ -1,35 +1,55 @@
-// Verifica se MetaMask/provedor está disponível
-export function initWallet() {
-  return typeof window !== 'undefined' && !!window.ethereum
-}
+import { BrowserProvider } from "ethers";
 
-// Conecta a carteira e retorna o endereço ou null
-export async function connectWallet() {
-  if (!initWallet()) return null
+let estadoLocal = {
+  conectado: false,
+  endereco: null,
+  provider: null,
+  signer: null,
+};
+
+export async function conectarCarteira() {
+  if (!window.ethereum) {
+    alert("⚠️ MetaMask não encontrada!\nInstale a extensão primeiro.");
+    return null;
+  }
 
   try {
-    const accounts = await window.ethereum.request({
-      method: 'eth_requestAccounts'
-    })
-    return accounts[0] || null
-  } catch (err) {
-    // Usuário negou conexão ou erro de rede
-    console.warn('Erro ao conectar carteira:', err.message)
-    return null
+    const contas = await window.ethereum.request({
+      method: "eth_requestAccounts"
+    });
+
+    if (!contas.length) {
+      alert("⚠️ Nenhuma conta foi autorizada.");
+      return null;
+    }
+
+    const provider = new BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const endereco = await signer.getAddress();
+
+    estadoLocal = { conectado: true, endereco, provider, signer };
+    return { endereco, provider, signer };
+
+  } catch (erro) {
+    if (erro.code === 4001) {
+      alert("⚠️ Você cancelou a conexão. Tente novamente.");
+    } else {
+      alert("Erro: " + erro.message);
+    }
+    return null;
   }
 }
 
-// Opcional: Trocar de rede automaticamente
-export async function switchNetwork(chainId = '0x1') {
-  if (!initWallet()) return false
-  try {
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId }]
-    })
-    return true
-  } catch (err) {
-    console.warn('Rede indisponível:', err)
-    return false
-  }
+export function desconectarCarteira() {
+  estadoLocal = { conectado: false, endereco: null, provider: null, signer: null };
+}
+
+if (typeof window !== "undefined" && window.ethereum) {
+  window.ethereum.on("accountsChanged", (contas) => {
+    if (contas.length === 0) {
+      desconectarCarteira();
+      location.reload();
+    }
+  });
+  window.ethereum.on("chainChanged", () => location.reload());
 }
