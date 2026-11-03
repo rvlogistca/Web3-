@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AETHELSTAN EXCHANGE — USTD | Candlestick</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#050508;--gold:#d4af37;--gold2:#b8941f;--gold3:#8b7300;--text:#f4e481;--green:#26a69a;--red:#ef5350}
@@ -79,7 +80,6 @@ body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);
 </div>
 
 <div class="main">
-  <!-- CHART + ORDERS -->
   <div>
     <div class="panel" style="margin-bottom:11px">
       <div class="chart-h">
@@ -121,7 +121,6 @@ body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);
     </div>
   </div>
 
-  <!-- ORDER BOOK -->
   <div>
     <div class="panel">
       <div class="ph">LIVRO DE OFERTAS <span class="tag">USTD/USDT</span></div>
@@ -132,7 +131,6 @@ body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);
     </div>
   </div>
 
-  <!-- TRADE + WALLET -->
   <div>
     <div class="panel" style="margin-bottom:11px">
       <div class="ph">MERCADO SPOT</div>
@@ -188,87 +186,73 @@ body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);
 
 <div class="foot">AETHELSTAN EXCHANGE • Candlestick Chart • USTD Spot • © 2026</div>
 
-<script>
-// ========== CONFIGURAÇÃO ==========
-const RPCs = [
-  "https://ethereum.publicnode.com",
-  "https://rpc.ankr.com/eth",
-  "https://eth.llamarpc.com",
-  "https://cloudflare-eth.com"
-];
-let rpcI = 0, connected = false, userAddr = null;
-const RESERVA = "0xB0A27099582833c0Cb8C7A0565759fF145113d64";
-const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+<script type="module">
+  import { conectarCarteira, desconectarCarteira } from './src/wallet.js';
 
-// ========== FUNÇÕES AUXILIARES ==========
-function log(m) {
-  const b = document.getElementById("log");
-  const t = new Date().toTimeString().slice(0, 8);
-  const d = document.createElement("div");
-  d.className = "log-line";
-  d.textContent = `[${t}] ${m}`;
-  b.insertBefore(d, b.firstChild);
-  if (b.children.length > 14) b.removeChild(b.lastChild);
-}
+  const RPCs = [
+    "https://ethereum.publicnode.com",
+    "https://rpc.ankr.com/eth",
+    "https://eth.llamarpc.com",
+    "https://cloudflare-eth.com"
+  ];
+  let rpcI = 0, connected = false, userAddr = null;
+  const RESERVA = "0xB0A27099582833c0Cb8C7A0565759fF145113d64";
+  const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 
-function fmt(n, d = 2) {
-  return Number(n).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
-}
-
-function hexN(h) {
-  return parseInt(h, 16);
-}
-
-// ========== CHAMADA RPC COM FALLBACK ==========
-async function rpc(method, params = []) {
-  for (let i = 0; i < RPCs.length; i++) {
-    const url = RPCs[(rpcI + i) % RPCs.length];
-    try {
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
-      });
-      const d = await r.json();
-      if (d.result !== undefined) {
-        rpcI = (rpcI + i) % RPCs.length;
-        document.getElementById("rpc").textContent = url.replace("https://", "").split("/")[0];
-        return d.result;
-      }
-    } catch (e) {
-      console.warn(`RPC falhou: ${url}`, e);
-    }
+  function log(m) {
+    const b = document.getElementById("log");
+    const t = new Date().toTimeString().slice(0, 8);
+    const d = document.createElement("div");
+    d.className = "log-line";
+    d.textContent = `[${t}] ${m}`;
+    b.insertBefore(d, b.firstChild);
+    if (b.children.length > 14) b.removeChild(b.lastChild);
   }
-  throw new Error("Todos os RPCs estão offline");
-}
 
-// ========== LER SALDOS DA BLOCKCHAIN ==========
-async function lerSaldos() {
-  const st = document.getElementById("wStatus");
-  st.textContent = "Consultando blockchain...";
-  try {
-    const addr = connected && userAddr ? userAddr : RESERVA;
-    
-    // Saldo ETH
-    const ethWei = await rpc("eth_getBalance", [addr, "latest"]);
-    const eth = hexN(ethWei) / 1e18;
-    document.getElementById("bEth").textContent = fmt(eth, 4) + " ETH";
-    
-    // Saldo USDT (via ERC20 balanceOf)
-    const data = "0x70a08231" + addr.slice(2).toLowerCase().padStart(64, "0");
-    const usdtHex = await rpc("eth_call", [{ to: USDT, data }, "latest"]);
-    const usdt = usdtHex && usdtHex !== "0x" ? hexN(usdtHex) / 1e6 : 0;
-    document.getElementById("bUsdt").textContent = fmt(usdt, 2) + " USDT";
-    
-    // USTD — valor simulado
-    document.getElementById("bUstd").textContent = fmt(1000000 + (Math.random() - 0.5) * 8, 2);
-    
-    // Dados de rede
-    const blockNum = hexN(await rpc("eth_blockNumber"));
-    document.getElementById("block").textContent = "#" + blockNum.toLocaleString();
-    const gasWei = hexN(await rpc("eth_gasPrice"));
-    document.getElementById("gas").textContent = (gasWei / 1e9).toFixed(1) + " Gwei";
-    
-    st.textContent = "✓ Atualizado às " + new Date().toLocaleTimeString("pt-BR");
-    log(`Saldos carregados • ETH: ${fmt(eth,4)} • USDT: ${fmt(usdt,2)}`);
-  } catch (
+  function fmt(n, d = 2) {
+    return Number(n).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  function hexN(h) {
+    return parseInt(h, 16);
+  }
+
+  async function rpc(method, params = []) {
+    for (let i = 0; i < RPCs.length; i++) {
+      const url = RPCs[(rpcI + i) % RPCs.length];
+      try {
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
+        });
+        const d = await r.json();
+        if (d.result !== undefined) {
+          rpcI = (rpcI + i) % RPCs.length;
+          document.getElementById("rpc").textContent = url.replace("https://", "").split("/")[0];
+          return d.result;
+        }
+      } catch (e) {}
+    }
+    throw new Error("Todos os RPCs estão offline");
+  }
+
+  async function lerSaldos() {
+    const st = document.getElementById("wStatus");
+    st.textContent = "Consultando blockchain...";
+    try {
+      const addr = connected && userAddr ? userAddr : RESERVA;
+      const ethWei = await rpc("eth_getBalance", [addr, "latest"]);
+      const eth = hexN(ethWei) / 1e18;
+      document.getElementById("bEth").textContent = fmt(eth, 4) + " ETH";
+      
+      const data = "0x70a08231" + addr.slice(2).toLowerCase().padStart(64, "0");
+      const usdtHex = await rpc("eth_call", [{ to: USDT, data }, "latest"]);
+      const usdt = usdtHex && usdtHex !== "0x" ? hexN(usdtHex) / 1e6 : 0;
+      document.getElementById("bUsdt").textContent = fmt(usdt, 2) + " USDT";
+      document.getElementById("bUstd").textContent = fmt(1000000 + (Math.random() - 0.5) * 8, 2);
+      
+      const blockNum = hexN(await rpc("eth_blockNumber"));
+      document.getElementById("block").textContent = "#" + blockNum.toLocaleString();
+      const gasWei = hexN(await rpc("eth_gasPrice"));
+      document.getElementById("gas").textContent = (gasWei / 1e9).toFixed(1) +
