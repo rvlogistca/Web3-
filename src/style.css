@@ -1,0 +1,28 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: sans-serif;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  padding: 2rem;
+}
+#app {
+  text-align: center;
+  background: rgba(255,255,255,0.05);
+  padding: 3rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+h1 { color: #00d4ff; margin-bottom: 1rem; }
+button {
+  background: linear-gradient(90deg, #00d4ff, #0099cc);
+  color: white; border: none; padding: 0.8rem 2rem;
+  font-size: 1rem; border-radius: 8px; cursor: pointer;
+  margin-top: 1rem;
+}
+button:hover { transform: scale(1.05); }
+#status { margin: 1rem 0; color: #ffcc00; }
+#walletInfo { margin-top: 1.5rem; color: #99ff99; font-family: monospace; }
