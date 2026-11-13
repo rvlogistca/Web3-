@@ -76,7 +76,7 @@ body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);
 <body>
 <div class="topbar">
   <div class="logo">AETHELSTAN <span>EXCHANGE</span></div>
-  <button class="btn-wallet" id="btnConnect">Conectar Carteira</button>
+  <button class="btn-wallet" id="btnConnect">🦊 Conectar Carteira</button>
 </div>
 
 <div class="main">
@@ -255,4 +255,38 @@ body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);
       const blockNum = hexN(await rpc("eth_blockNumber"));
       document.getElementById("block").textContent = "#" + blockNum.toLocaleString();
       const gasWei = hexN(await rpc("eth_gasPrice"));
-      document.getElementById("gas").textContent = (gasWei / 1e9).toFixed(1) +
+      document.getElementById("gas").textContent = (gasWei / 1e9).toFixed(1) + " Gwei";
+      
+      st.textContent = "Sincronizado";
+      log("✅ Saldos atualizados");
+    } catch (e) {
+      st.textContent = "Erro ao consultar";
+      log("⚠️ " + e.message);
+    }
+  }
+
+  // Conectar carteira
+  document.getElementById("btnConnect").addEventListener("click", async () => {
+    if (!connected) {
+      const carteira = await conectarCarteira();
+      if (carteira) {
+        connected = true;
+        userAddr = carteira.endereco;
+        document.getElementById("btnConnect").textContent = "✅ " + carteira.endereco.slice(0, 6) + "...";
+        document.getElementById("btnConnect").classList.add("on");
+        document.getElementById("wAddr").textContent = carteira.endereco;
+        document.getElementById("wStatus").textContent = "Conectado ✅";
+        log("🦊 Carteira conectada: " + carteira.endereco);
+        lerSaldos();
+      }
+    } else {
+      desconectarCarteira();
+      connected = false;
+      userAddr = null;
+      document.getElementById("btnConnect").textContent = "🦊 Conectar Carteira";
+      document.getElementById("btnConnect").classList.remove("on");
+      document.getElementById("wAddr").textContent = "Não conectado";
+      document.getElementById("wStatus").textContent = "Aguardando conexão...";
+      document.getElementById("bEth").textContent = "—";
+      document.getElementById("bUsdt").textContent = "—";
+      document.getElementById("bUstd").text
